@@ -89,11 +89,12 @@ jobs:
           echo "=== DISPLAY VARIABLE ==="
           echo "${DISPLAY:-NOT SET}"
 
-          echo "=== Xvfb ==="
+          echo "=== XVFB CHECK ==="
           if command -v Xvfb >/dev/null 2>&1; then
-            Xvfb -version 2>&1 | head -n 5
+            echo "XVFB INSTALLED"
+            command -v Xvfb
           else
-            echo "XVFB NOT AVAILABLE"
+            echo "XVFB NOT INSTALLED"
           fi
 
           echo "=== X11 SOCKET ==="
@@ -105,6 +106,8 @@ jobs:
           else
             echo "GLXINFO NOT INSTALLED"
           fi
+
+          echo "=== DISPLAY DIAGNOSTIC COMPLETED ==="
 
       - name: Network Diagnostic
         shell: bash
