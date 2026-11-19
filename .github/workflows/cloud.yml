@@ -27,17 +27,27 @@ jobs:
           echo "=== NVIDIA ==="
           nvidia-smi || true
       
-      - name: GPU Deep Diagnostic
+            - name: GPU Deep Diagnostic
         run: |
-          echo "=== GPU DRIVER ==="
-          ls -l /sys/class/drm/
-          echo "=== GPU INFORMATION ==="
-          for f in /sys/class/drm/card*/device/vendor /sys/class/drm/card*/device/device; do
+          echo "=== GPU DEVICES ==="
+          ls -l /dev/dri/ || true
+
+          echo "=== GPU VENDOR ==="
+          for f in /sys/class/drm/card*/device/vendor; do
             echo "$f"
             cat "$f" 2>/dev/null || true
           done
-          echo "=== VIDEO ENCODERS ==="
-          ls /dev/dri/
+
+          echo "=== GPU DEVICE ID ==="
+          for f in /sys/class/drm/card*/device/device; do
+            echo "$f"
+            cat "$f" 2>/dev/null || true
+          done
+
+          echo "=== GPU DRIVER ==="
+          for f in /sys/class/drm/card*/device/uevent; do
+            cat "$f" 2>/dev/null || true
+          done
  
       - name: Display Diagnostic
         run: |
