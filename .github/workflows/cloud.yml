@@ -45,6 +45,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y sunshine
 
+      - name: Connect Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
       - name: Start Virtual Display
         run: |
           export DISPLAY=:99
