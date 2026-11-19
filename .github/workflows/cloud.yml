@@ -1,27 +1,49 @@
 name: PS5 Cloud Lab
 
 on:
-  workflow_dispatch:
+workflow_dispatch:
 
 jobs:
-  cloud-server:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
+cloud-server:
+runs-on: ubuntu-24.04
+timeout-minutes: 60
 
-    steps:
-      - name: Initialize Ubuntu
-        run: |
-          echo "PS5 Cloud Lab Started"
-          echo "Ubuntu Cloud Runner Ready"
-          uname -a
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
 
-      - name: Check Resources
-        run: |
-          free -h
-          df -h
-          nproc
+  - name: CPU Diagnostic
+    run: |
+      echo "=== CPU ==="
+      lscpu
 
-      - name: Session Information
-        run: |
-          echo "Experimental session"
-          echo "Duration: 60 minutes"
+  - name: RAM Diagnostic
+    run: |
+      echo "=== RAM ==="
+      free -h
+
+  - name: GPU Diagnostic
+    run: |
+      echo "=== GPU DEVICES ==="
+      ls -la /dev/dri/ || true
+      echo "=== NVIDIA ==="
+      command -v nvidia-smi || true
+      nvidia-smi || true
+
+  - name: Display Diagnostic
+    run: |
+      echo "=== DISPLAY ==="
+      echo "DISPLAY=$DISPLAY"
+      ls /tmp/.X11-unix/ || true
+      command -v Xvfb || true
+
+  - name: Network Diagnostic
+    run: |
+      echo "=== NETWORK ==="
+      ip -brief address
+      echo "=== PORTS ==="
+      ss -tuln
+
+  - name: Diagnostic Complete
+    run: |
+      echo "PS5 Cloud Lab diagnostic completed."
