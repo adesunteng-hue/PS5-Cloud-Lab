@@ -1,4 +1,4 @@
-name: PS5 Cloud Lab
+name: PS5 Cloud Lab Final
 
 on:
   workflow_dispatch:
@@ -6,181 +6,96 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   cloud-server:
-    name: Cloud Server Diagnostics
+    name: PS5 Cloud Desktop
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 120
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: System Information
-        shell: bash
+      - name: Install Desktop Environment
         run: |
-          echo "================================"
-          echo "       SYSTEM INFORMATION"
-          echo "================================"
-
-          echo "=== OS ==="
-          uname -a
-          cat /etc/os-release
-
-          echo "=== CPU ==="
-          lscpu
-
-          echo "=== RAM ==="
-          free -h
-
-          echo "=== STORAGE ==="
-          df -h
-
-      - name: GPU Deep Diagnostic
-        shell: bash
-        run: |
-          echo "================================"
-          echo "       GPU DEEP DIAGNOSTIC"
-          echo "================================"
-
-          echo "=== GPU DEVICES ==="
-          ls -lah /dev/dri/ 2>&1 || true
-
-          echo "=== GPU VENDOR ==="
-          shopt -s nullglob
-          for f in /sys/class/drm/card*/device/vendor; do
-            echo "File: $f"
-            cat "$f" 2>/dev/null || true
-          done
-
-          echo "=== GPU DEVICE ID ==="
-          for f in /sys/class/drm/card*/device/device; do
-            echo "File: $f"
-            cat "$f" 2>/dev/null || true
-          done
-
-          echo "=== GPU DRIVER ==="
-          for f in /sys/class/drm/card*/device/uevent; do
-            echo "File: $f"
-            cat "$f" 2>/dev/null || true
-          done
-
-          echo "=== DRM DRIVER NAME ==="
-          for f in /sys/class/drm/card*/device/driver; do
-            echo "$f -> $(readlink -f "$f")"
-          done
-
-          echo "=== NVIDIA ==="
-          if command -v nvidia-smi >/dev/null 2>&1; then
-            nvidia-smi
-          else
-            echo "NVIDIA-SMI NOT AVAILABLE"
-          fi
-
-          echo "=== GPU DIAGNOSTIC FINISHED ==="
-
-      - name: Display Diagnostic
-        shell: bash
-        run: |
-          echo "================================"
-          echo "       DISPLAY DIAGNOSTIC"
-          echo "================================"
-
-          echo "=== DISPLAY VARIABLE ==="
-          echo "${DISPLAY:-NOT SET}"
-
-          echo "=== XVFB CHECK ==="
-          if command -v Xvfb >/dev/null 2>&1; then
-            echo "XVFB INSTALLED"
-            command -v Xvfb
-          else
-            echo "XVFB NOT INSTALLED"
-          fi
-
-          echo "=== X11 SOCKET ==="
-          ls -lah /tmp/.X11-unix/ 2>&1 || true
-
-          echo "=== GLX INFO ==="
-          if command -v glxinfo >/dev/null 2>&1; then
-            glxinfo -B 2>&1 || true
-          else
-            echo "GLXINFO NOT INSTALLED"
-          fi
-
-          echo "=== DISPLAY DIAGNOSTIC COMPLETED ==="
-      
-      - name: OpenGL Rendering Test
-        shell: bash
-        run: |
-          echo "=== INSTALL MESA TOOLS ==="
           sudo apt-get update
-          sudo apt-get install -y mesa-utils
 
-          echo "=== START VIRTUAL DISPLAY ==="
-          Xvfb :99 -screen 0 1280x720x24 -ac &
-          
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            xfce4 \
+            xfce4-terminal \
+            dbus-x11 \
+            xvfb \
+            x11vnc \
+            xauth \
+            mesa-utils \
+            mesa-vulkan-drivers \
+            libgl1 \
+            pulseaudio \
+            curl \
+            wget \
+            unzip \
+            jq
+
+      - name: Install Sunshine
+        run: |
+          curl -1sLf \
+            'https://dl.cloudsmith.io/public/lizardbyte/stable/cfg/setup/bash.deb.sh' \
+            | sudo -E bash
+
+          sudo apt-get update
+          sudo apt-get install -y sunshine
+
+      - name: Start Virtual Display
+        run: |
           export DISPLAY=:99
+
+          Xvfb :99 \
+            -screen 0 1280x720x24 \
+            -ac \
+            +extension GLX \
+            +render \
+            -noreset &
+
           sleep 3
 
-          echo "=== DISPLAY STATUS ==="
-          echo "$DISPLAY"
+      - name: Start XFCE Desktop
+        run: |
+          export DISPLAY=:99
 
-          echo "=== OPENGL RENDERER ==="
-          glxinfo -B
+          mkdir -p /tmp/runtime-runner
+          chmod 700 /tmp/runtime-runner
 
-          echo "=== RENDERING TEST COMPLETED ==="
+          export XDG_RUNTIME_DIR=/tmp/runtime-runner
 
-      - name: Network Diagnostic
-        shell: bash
+          pulseaudio --start || true
+
+          dbus-run-session -- xfce4-session \
+            > /tmp/xfce.log 2>&1 &
+
+          sleep 10
+
+      - name: Start Sunshine Server
+        run: |
+          export DISPLAY=:99
+          export XDG_RUNTIME_DIR=/tmp/runtime-runner
+
+          mkdir -p "$HOME/.config/sunshine"
+
+          nohup sunshine \
+            > /tmp/sunshine.log 2>&1 &
+
+          sleep 5
+
+      - name: Run Cloud Session
         run: |
           echo "================================"
-          echo "       NETWORK DIAGNOSTIC"
+          echo "       PS5 CLOUD LAB"
+          echo "================================"
+          echo "OS: Ubuntu 24.04"
+          echo "Desktop: XFCE"
+          echo "Display: 1280x720"
+          echo "Streaming: Sunshine"
+          echo "Session: 120 Minutes"
           echo "================================"
 
-          echo "=== IP ADDRESS ==="
-          if command -v ip >/dev/null 2>&1; then
-            ip -brief address
-          else
-            echo "IP COMMAND NOT AVAILABLE"
-          fi
-
-          echo "=== PORTS ==="
-          if command -v ss >/dev/null 2>&1; then
-            ss -tuln
-          else
-            echo "SS COMMAND NOT AVAILABLE"
-          fi
-
-          echo "=== INTERNET ==="
-          if curl -Is --max-time 10 https://github.com >/dev/null 2>&1; then
-            echo "INTERNET CONNECTION OK"
-          else
-            echo "INTERNET CONNECTION CHECK FAILED"
-          fi
-
-      - name: Environment Summary
-        shell: bash
-        run: |
-          echo "================================"
-          echo "       FINAL SUMMARY"
-          echo "================================"
-
-          echo "Hostname: $(hostname)"
-          echo "Architecture: $(uname -m)"
-          echo "CPU Cores: $(nproc)"
-          echo "RAM:"
-          free -h
-
-          echo "=== AVAILABLE COMMANDS ==="
-          for cmd in git bash curl Xvfb nvidia-smi; do
-            if command -v "$cmd" >/dev/null 2>&1; then
-              echo "$cmd: AVAILABLE"
-            else
-              echo "$cmd: NOT AVAILABLE"
-            fi
-          done
-
-          echo "================================"
-          echo "   PS5 CLOUD LAB DIAGNOSTIC"
-          echo "       COMPLETED"
-          echo "================================"
+          sleep 6900
