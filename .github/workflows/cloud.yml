@@ -2,65 +2,161 @@ name: PS5 Cloud Lab
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   cloud-server:
-    name: Ubuntu Cloud Environment
+    name: Cloud Server Diagnostics
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     steps:
-      - name: CPU Diagnostic
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: System Information
+        shell: bash
         run: |
+          echo "================================"
+          echo "       SYSTEM INFORMATION"
+          echo "================================"
+
+          echo "=== OS ==="
+          uname -a
+          cat /etc/os-release
+
           echo "=== CPU ==="
           lscpu
 
-      - name: RAM Diagnostic
-        run: |
           echo "=== RAM ==="
           free -h
 
-      - name: GPU Diagnostic
+          echo "=== STORAGE ==="
+          df -h
+
+      - name: GPU Deep Diagnostic
+        shell: bash
         run: |
+          echo "================================"
+          echo "       GPU DEEP DIAGNOSTIC"
+          echo "================================"
+
           echo "=== GPU DEVICES ==="
-          ls -la /dev/dri/ || true
-          echo "=== NVIDIA ==="
-          nvidia-smi || true
-      
-            - name: GPU Deep Diagnostic
-        run: |
-          echo "=== GPU DEVICES ==="
-          ls -l /dev/dri/ || true
+          ls -lah /dev/dri/ 2>&1 || true
 
           echo "=== GPU VENDOR ==="
+          shopt -s nullglob
           for f in /sys/class/drm/card*/device/vendor; do
-            echo "$f"
+            echo "File: $f"
             cat "$f" 2>/dev/null || true
           done
 
           echo "=== GPU DEVICE ID ==="
           for f in /sys/class/drm/card*/device/device; do
-            echo "$f"
+            echo "File: $f"
             cat "$f" 2>/dev/null || true
           done
 
           echo "=== GPU DRIVER ==="
           for f in /sys/class/drm/card*/device/uevent; do
+            echo "File: $f"
             cat "$f" 2>/dev/null || true
           done
- 
+
+          echo "=== DRM DRIVER NAME ==="
+          for f in /sys/class/drm/card*/device/driver; do
+            echo "$f -> $(readlink -f "$f")"
+          done
+
+          echo "=== NVIDIA ==="
+          if command -v nvidia-smi >/dev/null 2>&1; then
+            nvidia-smi
+          else
+            echo "NVIDIA-SMI NOT AVAILABLE"
+          fi
+
+          echo "=== GPU DIAGNOSTIC FINISHED ==="
+
       - name: Display Diagnostic
+        shell: bash
         run: |
-          echo "=== DISPLAY ==="
-          echo "DISPLAY=$DISPLAY"
-          command -v Xvfb || true
+          echo "================================"
+          echo "       DISPLAY DIAGNOSTIC"
+          echo "================================"
+
+          echo "=== DISPLAY VARIABLE ==="
+          echo "${DISPLAY:-NOT SET}"
+
+          echo "=== Xvfb ==="
+          if command -v Xvfb >/dev/null 2>&1; then
+            Xvfb -version 2>&1 | head -n 5
+          else
+            echo "XVFB NOT AVAILABLE"
+          fi
+
+          echo "=== X11 SOCKET ==="
+          ls -lah /tmp/.X11-unix/ 2>&1 || true
+
+          echo "=== GLX INFO ==="
+          if command -v glxinfo >/dev/null 2>&1; then
+            glxinfo -B 2>&1 || true
+          else
+            echo "GLXINFO NOT INSTALLED"
+          fi
 
       - name: Network Diagnostic
+        shell: bash
         run: |
-          echo "=== NETWORK ==="
-          ip -brief address
-          ss -tuln
+          echo "================================"
+          echo "       NETWORK DIAGNOSTIC"
+          echo "================================"
 
-      - name: Diagnostic Complete
+          echo "=== IP ADDRESS ==="
+          if command -v ip >/dev/null 2>&1; then
+            ip -brief address
+          else
+            echo "IP COMMAND NOT AVAILABLE"
+          fi
+
+          echo "=== PORTS ==="
+          if command -v ss >/dev/null 2>&1; then
+            ss -tuln
+          else
+            echo "SS COMMAND NOT AVAILABLE"
+          fi
+
+          echo "=== INTERNET ==="
+          if curl -Is --max-time 10 https://github.com >/dev/null 2>&1; then
+            echo "INTERNET CONNECTION OK"
+          else
+            echo "INTERNET CONNECTION CHECK FAILED"
+          fi
+
+      - name: Environment Summary
+        shell: bash
         run: |
-          echo "PS5 Cloud Lab is ready!"
+          echo "================================"
+          echo "       FINAL SUMMARY"
+          echo "================================"
+
+          echo "Hostname: $(hostname)"
+          echo "Architecture: $(uname -m)"
+          echo "CPU Cores: $(nproc)"
+          echo "RAM:"
+          free -h
+
+          echo "=== AVAILABLE COMMANDS ==="
+          for cmd in git bash curl Xvfb nvidia-smi; do
+            if command -v "$cmd" >/dev/null 2>&1; then
+              echo "$cmd: AVAILABLE"
+            else
+              echo "$cmd: NOT AVAILABLE"
+            fi
+          done
+
+          echo "================================"
+          echo "   PS5 CLOUD LAB DIAGNOSTIC"
+          echo "       COMPLETED"
+          echo "================================"
