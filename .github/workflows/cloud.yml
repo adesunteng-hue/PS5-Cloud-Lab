@@ -1,0 +1,27 @@
+name: PS5 Cloud Lab
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cloud-server:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Initialize Ubuntu
+        run: |
+          echo "PS5 Cloud Lab Started"
+          echo "Ubuntu Cloud Runner Ready"
+          uname -a
+
+      - name: Check Resources
+        run: |
+          free -h
+          df -h
+          nproc
+
+      - name: Session Information
+        run: |
+          echo "Experimental session"
+          echo "Duration: 60 minutes"
