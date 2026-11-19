@@ -26,7 +26,19 @@ jobs:
           ls -la /dev/dri/ || true
           echo "=== NVIDIA ==="
           nvidia-smi || true
-
+      
+      - name: GPU Deep Diagnostic
+        run: |
+          echo "=== GPU DRIVER ==="
+          ls -l /sys/class/drm/
+          echo "=== GPU INFORMATION ==="
+          for f in /sys/class/drm/card*/device/vendor /sys/class/drm/card*/device/device; do
+            echo "$f"
+            cat "$f" 2>/dev/null || true
+          done
+          echo "=== VIDEO ENCODERS ==="
+          ls /dev/dri/
+ 
       - name: Display Diagnostic
         run: |
           echo "=== DISPLAY ==="
