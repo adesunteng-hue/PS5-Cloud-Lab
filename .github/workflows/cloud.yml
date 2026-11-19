@@ -1,51 +1,44 @@
 name: PS5 Cloud Lab
 
 on:
-  workflow_dispatch:
+workflow_dispatch:
 
 jobs:
-  cloud-server:
-    name: Ubuntu Cloud Environment
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
+cloud-server:
+name: Ubuntu Cloud Environment
+runs-on: ubuntu-24.04
+timeout-minutes: 60
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+steps:
+  - name: CPU Diagnostic
+    run: |
+      echo "=== CPU ==="
+      lscpu
 
-      - name: CPU Diagnostic
-        run: |
-          echo "=== CPU ==="
-          lscpu
+  - name: RAM Diagnostic
+    run: |
+      echo "=== RAM ==="
+      free -h
 
-      - name: RAM Diagnostic
-        run: |
-          echo "=== RAM ==="
-          free -h
+  - name: GPU Diagnostic
+    run: |
+      echo "=== GPU DEVICES ==="
+      ls -la /dev/dri/ || true
+      echo "=== NVIDIA ==="
+      nvidia-smi || true
 
-      - name: GPU Diagnostic
-        run: |
-          echo "=== GPU DEVICES ==="
-          ls -la /dev/dri/ || true
-          echo "=== NVIDIA ==="
-          command -v nvidia-smi || true
-          nvidia-smi || true
+  - name: Display Diagnostic
+    run: |
+      echo "=== DISPLAY ==="
+      echo "DISPLAY=$DISPLAY"
+      command -v Xvfb || true
 
-      - name: Display Diagnostic
-        run: |
-          echo "=== DISPLAY ==="
-          echo "DISPLAY=$DISPLAY"
-          ls /tmp/.X11-unix/ || true
-          command -v Xvfb || true
+  - name: Network Diagnostic
+    run: |
+      echo "=== NETWORK ==="
+      ip -brief address
+      ss -tuln
 
-      - name: Network Diagnostic
-        run: |
-          echo "=== NETWORK ==="
-          ip -brief address
-          echo "=== PORTS ==="
-          ss -tuln
-
-      - name: Diagnostic Complete
-        run: |
-          echo "PS5 Cloud Lab diagnostic completed."
-          echo "Ubuntu environment ready!"
+  - name: Diagnostic Complete
+    run: |
+      echo "PS5 Cloud Lab is ready!"
